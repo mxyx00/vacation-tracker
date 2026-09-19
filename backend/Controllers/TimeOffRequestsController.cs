@@ -7,11 +7,11 @@ namespace backend.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class TimeOffRequestController : ControllerBase
+public class TimeOffRequestsController : ControllerBase
 {
     private readonly AppDbContext _context;
 
-    public TimeOffRequestController(AppDbContext context)
+    public TimeOffRequestsController(AppDbContext context)
     {
         _context = context;
     }
@@ -63,5 +63,99 @@ public class TimeOffRequestController : ControllerBase
         return await _context.TimeOffRequests.Where(r => r.EmployeeId == employeeId).ToListAsync();
     }
 
+        [HttpGet("in-review")]
+        public async Task<ActionResult<IEnumerable<TimeOffRequest>>> GetInReviewRequests()
+    {
+        return await _context.TimeOffRequests.Where(r => r.Status == RequestStatus.InReview).ToListAsync();
+    }
+
+    // Approval
+    [HttpPut("{id}/approve")]
+    public async Task<IActionResult> ApproveRequest(int id, string? managerComment)
+    {
+        var request = await _context.TimeOffRequests.FindAsync(id);
+
+        if (request == null)
+        {
+            return NotFound();
+        }
+
+        if (request.Status != RequestStatus.InReview)
+        {
+            return BadRequest("Only requests in review can be approved.");
+        }
+
+        request.Status = RequestStatus.Approved;
+        request.ManagerComment = managerComment;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(request);
+    }
+
+    // Rejection
+    [HttpPut("{id}/reject")]
+    public async Task<IActionResult> RejectRequest(int id, string? managerComment)
+    {
+        var request = await _context.TimeOffRequests.FindAsync(id);
+
+        if (request == null)
+        {
+            return NotFound();
+        }
+
+               if (request.Status != RequestStatus.InReview)
+        {
+            return BadRequest("Only requests in review can be approved.");
+        }
+
+        request.Status = RequestStatus.Rejected;
+        request.ManagerComment = managerComment;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(request);
+    }
+
+    // edit
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateRequest(int id, CreateTimeOffRequest updatedRequest)
+    {
+        var request = await _context.TimeOffRequests.FindAsync(id);
+
+        if (request == null)
+        {
+            return NotFound();
+        }
+
+        if (updatedRequest.EndDate < updatedRequest.StartDate)
+        {
+            return BadRequest("End date cannot be before start date.");
+        }
+
+        var today = DateOnly.FromDateTime(DateTime.Today);
+
+        if (updatedRequest.EndDate < today)
+        {
+            return BadRequest("Request cannot be entirely in the past.");
+        }
+
+        request.StartDate = updatedRequest.StartDate;
+        request.EndDate = updatedRequest.EndDate;
+        request.Type = updatedRequest.Type;
+        request.EmployeeComment = updatedRequest.EmployeeComment;
+
+        await _context.SaveChangesAsync();
+
+        return Ok(request);
+    }
+
+
+    [HttpGet]
+    public async Task<ActionResult<IEnumerable<TimeOffRequest>>> GetAllRequests()
+    {
+        return await _context.TimeOffRequests.ToListAsync();
+    }
 
 }

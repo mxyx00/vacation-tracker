@@ -80,7 +80,7 @@ function App() {
         .then(data => setManagerRequests(data))
         .catch(error => console.error("Error loading manager requests:", error));
     }
-  }, [selectedEmployeeId, employees]);
+  }, [selectedEmployeeId, employees, selectedEmployee?.role]);
 
   function loadRequests(employeeId: number) {
     fetch(`http://localhost:5175/api/timeoffrequests/employee/${employeeId}`)

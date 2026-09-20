@@ -59,9 +59,22 @@ TimeOffRequests
 
 -----------------
 
+## to install
+1. net10 sdk
+2. node.js & npm
+3. mysql + workbench etc.
 
 ## to create database
 dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Port=3306;Database=vacation_tracker;User=vacation_app;Password= ;"
+
+CREATE USER 'vacation_app'@'localhost'
+IDENTIFIED BY '{password}';
+
+GRANT ALL PRIVILEGES
+ON vacation_tracker.*
+TO 'vacation_app'@'localhost';
+
+FLUSH PRIVILEGES;
 
 ## EF migrations
 

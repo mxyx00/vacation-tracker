@@ -238,6 +238,15 @@ function App() {
     }
   }
 
+  // makes date from UTC to nice
+    function formatDate(date: string) {
+    return parseDate(date).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric"
+    });
+  }
+
   function getEmployeeName(employeeId: number) {
     const employee = employees.find(
       employee => employee.id === employeeId
@@ -328,7 +337,7 @@ function App() {
     <div>
       <h1>Vacation Request Tracker</h1>
 
-      <label>
+      <label className="user-selector">
         Current User:{" "}
         <select
           value={selectedEmployeeId}
@@ -353,6 +362,7 @@ function App() {
         </select>
       </label>
 
+        <section className="section-card">
       <h2>
         {editingRequestId === null
           ? "New Request"
@@ -439,7 +449,9 @@ function App() {
           </button>
         )}
       </form>
+      </section>
 
+        <div className = "section-header">
       <h2>My Requests</h2>
 
       <label>
@@ -459,7 +471,7 @@ function App() {
           </option>
 
           <option value="1">
-            Approved
+            Aproved
           </option>
 
           <option value="2">
@@ -467,6 +479,7 @@ function App() {
           </option>
         </select>
       </label>
+      </div>
 
       {filteredRequests.length === 0 ? (
         <p>No requests found.</p>
@@ -479,6 +492,7 @@ function App() {
               <th>End Date</th>
               <th>Status</th>
               <th>Comment</th>
+              <th>Manager Comment</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -490,19 +504,8 @@ function App() {
                   {getTypeName(request.type)}
                 </td>
 
-                <td>
-                  {request.startDate.substring(
-                    0,
-                    10
-                  )}
-                </td>
-
-                <td>
-                  {request.endDate.substring(
-                    0,
-                    10
-                  )}
-                </td>
+                <td>{formatDate(request.startDate)}</td>
+                <td>{formatDate(request.endDate)}</td>
 
                 <td>
                   {getStatusName(
@@ -513,6 +516,8 @@ function App() {
                 <td>
                   {request.employeeComment}
                 </td>
+
+                <td>  {request.managerComment || "-"}</td>
 
                 <td>
                   {request.status === 0 && (
@@ -568,19 +573,8 @@ function App() {
                         )}
                       </td>
 
-                      <td>
-                        {request.startDate.substring(
-                          0,
-                          10
-                        )}
-                      </td>
-
-                      <td>
-                        {request.endDate.substring(
-                          0,
-                          10
-                        )}
-                      </td>
+                      <td>{formatDate(request.startDate)}</td>
+                      <td>{formatDate(request.endDate)}</td>
 
                       <td>
                         {
@@ -652,7 +646,6 @@ function App() {
                     request
                   )}
                 >
-                  {getTypeName(request.type)}
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import "./App.css";
 
 interface Employee {
   id: number;
@@ -20,23 +21,24 @@ interface TimeOffRequest {
 }
 
 function App() {
-
-  //state variables
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number>(0);
+
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
+  const [managerRequests, setManagerRequests] = useState<TimeOffRequest[]>([]);
+  const [allRequests, setAllRequests] = useState<TimeOffRequest[]>([]);
 
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState(0);
   const [comment, setComment] = useState("");
-  const [editingRequestId, setEditingRequestId] = useState<number | null>(null); //alows users to edit
 
-
-  const [managerRequests, setManagerRequests] = useState<TimeOffRequest[]>([]);
+  const [editingRequestId, setEditingRequestId] =
+    useState<number | null>(null);
 
   const [statusFilter, setStatusFilter] = useState("all");
 
+  // Load employees when the page first opens
   useEffect(() => {
     fetch("http://localhost:5175/api/employees")
       .then(response => response.json())
@@ -52,6 +54,7 @@ function App() {
       );
   }, []);
 
+  // Load requests for the currently selected employee
   useEffect(() => {
     if (selectedEmployeeId === 0) {
       return;
@@ -59,6 +62,22 @@ function App() {
 
     loadRequests(selectedEmployeeId);
   }, [selectedEmployeeId]);
+
+  // Load all requests for the timeline
+  useEffect(() => {
+    loadAllRequests();
+  }, []);
+
+  const selectedEmployee = employees.find(
+    employee => employee.id === selectedEmployeeId
+  );
+
+  // If the selected user is a manager, load requests waiting for review
+  useEffect(() => {
+    if (selectedEmployee?.role === 1) {
+      loadManagerRequests();
+    }
+  }, [selectedEmployeeId, employees]);
 
   function loadRequests(employeeId: number) {
     fetch(
@@ -71,8 +90,25 @@ function App() {
       );
   }
 
-  async function handleSubmit(event: FormEvent) 
-  {
+  function loadManagerRequests() {
+    fetch("http://localhost:5175/api/timeoffrequests/in-review")
+      .then(response => response.json())
+      .then(data => setManagerRequests(data))
+      .catch(error =>
+        console.error("Error loading manager requests:", error)
+      );
+  }
+
+  function loadAllRequests() {
+    fetch("http://localhost:5175/api/timeoffrequests")
+      .then(response => response.json())
+      .then(data => setAllRequests(data))
+      .catch(error =>
+        console.error("Error loading all requests:", error)
+      );
+  }
+
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault();
 
     const requestData = {
@@ -87,7 +123,9 @@ function App() {
     let method = "POST";
 
     if (editingRequestId !== null) {
-      url = `http://localhost:5175/api/timeoffrequests/${editingRequestId}`;
+      url =
+        `http://localhost:5175/api/timeoffrequests/${editingRequestId}`;
+
       method = "PUT";
     }
 
@@ -105,14 +143,72 @@ function App() {
       return;
     }
 
-  setStartDate("");
-  setEndDate("");
-  setType(0);
-  setComment("");
-  setEditingRequestId(null);
+    clearForm();
 
-  loadRequests(selectedEmployeeId);
-}
+    loadRequests(selectedEmployeeId);
+    loadAllRequests();
+  }
+
+  function clearForm() {
+    setStartDate("");
+    setEndDate("");
+    setType(0);
+    setComment("");
+    setEditingRequestId(null);
+  }
+
+  function editRequest(request: TimeOffRequest) {
+    setEditingRequestId(request.id);
+
+    setStartDate(request.startDate.substring(0, 10));
+    setEndDate(request.endDate.substring(0, 10));
+    setType(request.type);
+    setComment(request.employeeComment ?? "");
+  }
+
+  async function approveRequest(id: number) {
+    const comment =
+      window.prompt("Optional manager comment:") ?? "";
+
+    const response = await fetch(
+      `http://localhost:5175/api/timeoffrequests/${id}/approve?managerComment=${encodeURIComponent(comment)}`,
+      {
+        method: "PUT"
+      }
+    );
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      alert(errorMessage);
+      return;
+    }
+
+    loadManagerRequests();
+    loadRequests(selectedEmployeeId);
+    loadAllRequests();
+  }
+
+  async function rejectRequest(id: number) {
+    const comment =
+      window.prompt("Optional manager comment:") ?? "";
+
+    const response = await fetch(
+      `http://localhost:5175/api/timeoffrequests/${id}/reject?managerComment=${encodeURIComponent(comment)}`,
+      {
+        method: "PUT"
+      }
+    );
+
+    if (!response.ok) {
+      const errorMessage = await response.text();
+      alert(errorMessage);
+      return;
+    }
+
+    loadManagerRequests();
+    loadRequests(selectedEmployeeId);
+    loadAllRequests();
+  }
 
   function getTypeName(type: number) {
     switch (type) {
@@ -142,25 +238,6 @@ function App() {
     }
   }
 
-  const selectedEmployee = employees.find(
-    employee => employee.id === selectedEmployeeId
-  );
-
-  function loadManagerRequests() {
-    fetch("http://localhost:5175/api/timeoffrequests/in-review")
-      .then(response => response.json())
-      .then(data => setManagerRequests(data))
-      .catch(error =>
-        console.error("Error loading manager requests:", error)
-      );
-  }
-
-  useEffect(() => {
-    if (selectedEmployee?.role === 1) {
-      loadManagerRequests();
-    }
-  }, [selectedEmployeeId, employees]);
-
   function getEmployeeName(employeeId: number) {
     const employee = employees.find(
       employee => employee.id === employeeId
@@ -173,60 +250,7 @@ function App() {
     return `${employee.firstName} ${employee.lastName}`;
   }
 
-  async function approveRequest(id: number) {
-    const comment =
-      window.prompt("Optional manager comment:") ?? "";
-
-    const response = await fetch(
-      `http://localhost:5175/api/timeoffrequests/${id}/approve?managerComment=${encodeURIComponent(comment)}`,
-      {
-        method: "PUT"
-      }
-    );
-
-    if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(errorMessage);
-      return;
-    }
-
-    loadManagerRequests();
-    loadRequests(selectedEmployeeId); //refreshes
-  }
-
-  async function rejectRequest(id: number) {
-    const comment =
-      window.prompt("Optional manager comment:") ?? "";
-
-    const response = await fetch(
-      `http://localhost:5175/api/timeoffrequests/${id}/reject?managerComment=${encodeURIComponent(comment)}`,
-      {
-        method: "PUT"
-      }
-    );
-
-    if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(errorMessage);
-      return;
-    }
-
-    loadManagerRequests();
-    loadRequests(selectedEmployeeId); //refresh test
-  }
-
-  function editRequest(request: TimeOffRequest)
-  {
-    setEditingRequestId(request.id);
-
-    setStartDate(request.startDate.substring(0, 10));
-    setEndDate(request.endDate.substring(0, 10));
-    setType(request.type);
-    setComment(request.employeeComment ?? "");
-  }
-
-  // filter 
-
+  // Filter the selected employee's requests
   const filteredRequests = requests.filter(request => {
     if (statusFilter === "all") {
       return true;
@@ -235,31 +259,105 @@ function App() {
     return request.status === Number(statusFilter);
   });
 
+  // Only approved requests appear on the timeline
+  const approvedRequests = allRequests.filter(
+    request => request.status === 1
+  );
+
+  function parseDate(date: string) {
+    return new Date(
+      date.substring(0, 10) + "T00:00:00"
+    );
+  }
+
+  const millisecondsPerDay =
+    1000 * 60 * 60 * 24;
+
+  let timelineStart: Date | null = null;
+  let timelineEnd: Date | null = null;
+
+  if (approvedRequests.length > 0) {
+    timelineStart = new Date(
+      Math.min(
+        ...approvedRequests.map(request =>
+          parseDate(request.startDate).getTime()
+        )
+      )
+    );
+
+    timelineEnd = new Date("2026-12-31T00:00:00");
+  }
+  
+
+  function getTimelineStyle(request: TimeOffRequest) {
+    if (!timelineStart || !timelineEnd) {
+      return {};
+    }
+
+    const requestStart = parseDate(request.startDate);
+    const requestEnd = parseDate(request.endDate);
+
+    const totalDays =
+      Math.round(
+        (timelineEnd.getTime() -
+          timelineStart.getTime()) /
+          millisecondsPerDay
+      ) + 1;
+
+    const startOffset =
+      Math.round(
+        (requestStart.getTime() -
+          timelineStart.getTime()) /
+          millisecondsPerDay
+      );
+
+    const requestLength =
+      Math.round(
+        (requestEnd.getTime() -
+          requestStart.getTime()) /
+          millisecondsPerDay
+      ) + 1;
+
+    return {
+      left: `${(startOffset / totalDays) * 100}%`,
+      width: `${(requestLength / totalDays) * 100}%`
+    };
+  }
+
   return (
     <div>
       <h1>Vacation Request Tracker</h1>
 
       <label>
-        Current User:
+        Current User:{" "}
         <select
           value={selectedEmployeeId}
           onChange={e => {
-              setSelectedEmployeeId(Number(e.target.value));
-              setStatusFilter("all"); // when changing users, refreshes the filter to all automatically
-            }}
+            setSelectedEmployeeId(
+              Number(e.target.value)
+            );
+
+            setStatusFilter("all");
+            clearForm();
+          }}
         >
           {employees.map(employee => (
             <option
               key={employee.id}
               value={employee.id}
             >
-              {employee.firstName} {employee.lastName}
+              {employee.firstName}{" "}
+              {employee.lastName}
             </option>
           ))}
         </select>
       </label>
 
-      <h2>{editingRequestId === null ? "New Request" : "Edit Request"}</h2>
+      <h2>
+        {editingRequestId === null
+          ? "New Request"
+          : "Edit Request"}
+      </h2>
 
       <form onSubmit={handleSubmit}>
         <div>
@@ -268,7 +366,9 @@ function App() {
           <input
             type="date"
             value={startDate}
-            onChange={e => setStartDate(e.target.value)}
+            onChange={e =>
+              setStartDate(e.target.value)
+            }
             required
           />
         </div>
@@ -279,7 +379,9 @@ function App() {
           <input
             type="date"
             value={endDate}
-            onChange={e => setEndDate(e.target.value)}
+            onChange={e =>
+              setEndDate(e.target.value)
+            }
             required
           />
         </div>
@@ -293,10 +395,21 @@ function App() {
               setType(Number(e.target.value))
             }
           >
-            <option value={0}>Vacation</option>
-            <option value={1}>Unpaid Leave</option>
-            <option value={2}>Parental Leave</option>
-            <option value={3}>Sick Leave</option>
+            <option value={0}>
+              Vacation
+            </option>
+
+            <option value={1}>
+              Unpaid Leave
+            </option>
+
+            <option value={2}>
+              Parental Leave
+            </option>
+
+            <option value={3}>
+              Sick Leave
+            </option>
           </select>
         </div>
 
@@ -305,16 +418,27 @@ function App() {
 
           <textarea
             value={comment}
-            onChange={e => setComment(e.target.value)}
+            onChange={e =>
+              setComment(e.target.value)
+            }
           />
         </div>
 
         <button type="submit">
-        {editingRequestId === null ? "Submit Request" : "Save Changes"}
+          {editingRequestId === null
+            ? "Submit Request"
+            : "Save Changes"}
         </button>
-      </form>
 
-      
+        {editingRequestId !== null && (
+          <button
+            type="button"
+            onClick={clearForm}
+          >
+            Cancel
+          </button>
+        )}
+      </form>
 
       <h2>My Requests</h2>
 
@@ -322,16 +446,29 @@ function App() {
         Filter by Status:{" "}
         <select
           value={statusFilter}
-          onChange={e => setStatusFilter(e.target.value)}
+          onChange={e =>
+            setStatusFilter(e.target.value)
+          }
         >
-          <option value="all">All</option>
-          <option value="0">In Review</option>
-          <option value="1">Approved</option>
-          <option value="2">Rejected</option>
+          <option value="all">
+            All
+          </option>
+
+          <option value="0">
+            In Review
+          </option>
+
+          <option value="1">
+            Approved
+          </option>
+
+          <option value="2">
+            Rejected
+          </option>
         </select>
       </label>
 
-      {filteredRequests.length === 0 ? ( //change to filteredRequests after making dropdown
+      {filteredRequests.length === 0 ? (
         <p>No requests found.</p>
       ) : (
         <table>
@@ -349,18 +486,45 @@ function App() {
           <tbody>
             {filteredRequests.map(request => (
               <tr key={request.id}>
-                <td>{getTypeName(request.type)}</td>
-                <td>{request.startDate}</td>
-                <td>{request.endDate}</td>
-                <td>{getStatusName(request.status)}</td>
-                <td>{request.employeeComment}</td>
-                  <td>
-                    {request.status === 0 && (
-                      <button onClick={() => editRequest(request)}>
-                        Edit
-                      </button>
-                    )}
-                  </td>
+                <td>
+                  {getTypeName(request.type)}
+                </td>
+
+                <td>
+                  {request.startDate.substring(
+                    0,
+                    10
+                  )}
+                </td>
+
+                <td>
+                  {request.endDate.substring(
+                    0,
+                    10
+                  )}
+                </td>
+
+                <td>
+                  {getStatusName(
+                    request.status
+                  )}
+                </td>
+
+                <td>
+                  {request.employeeComment}
+                </td>
+
+                <td>
+                  {request.status === 0 && (
+                    <button
+                      onClick={() =>
+                        editRequest(request)
+                      }
+                    >
+                      Edit
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -372,7 +536,9 @@ function App() {
           <h2>Manager Review</h2>
 
           {managerRequests.length === 0 ? (
-            <p>No requests waiting for review.</p>
+            <p>
+              No requests waiting for review.
+            </p>
           ) : (
             <table>
               <thead>
@@ -387,50 +553,110 @@ function App() {
               </thead>
 
               <tbody>
-                {managerRequests.map(request => (
-                  <tr key={request.id}>
-                    <td>
-                      {getEmployeeName(request.employeeId)}
-                    </td>
+                {managerRequests.map(
+                  request => (
+                    <tr key={request.id}>
+                      <td>
+                        {getEmployeeName(
+                          request.employeeId
+                        )}
+                      </td>
 
-                    <td>
-                      {getTypeName(request.type)}
-                    </td>
+                      <td>
+                        {getTypeName(
+                          request.type
+                        )}
+                      </td>
 
-                    <td>
-                      {request.startDate}
-                    </td>
+                      <td>
+                        {request.startDate.substring(
+                          0,
+                          10
+                        )}
+                      </td>
 
-                    <td>
-                      {request.endDate}
-                    </td>
+                      <td>
+                        {request.endDate.substring(
+                          0,
+                          10
+                        )}
+                      </td>
 
-                    <td>
-                      {request.employeeComment}
-                    </td>
-
-                    <td>
-                      <button
-                        onClick={() =>
-                          approveRequest(request.id)
+                      <td>
+                        {
+                          request.employeeComment
                         }
-                      >
-                        Approve
-                      </button>
+                      </td>
 
-                      <button
-                        onClick={() =>
-                          rejectRequest(request.id)
-                        }
-                      >
-                        Reject
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      <td>
+                        <button
+                          onClick={() =>
+                            approveRequest(
+                              request.id
+                            )
+                          }
+                        >
+                          Approve
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            rejectRequest(
+                              request.id
+                            )
+                          }
+                        >
+                          Reject
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                )}
               </tbody>
             </table>
           )}
+        </div>
+      )}
+
+      <h2>Approved Time Off</h2>
+
+      {approvedRequests.length === 0 ? (
+        <p>No approved time off found.</p>
+      ) : (
+        <div className="timeline">
+          <div className="timeline-dates">
+            <span>
+              {timelineStart?.toLocaleDateString()}
+            </span>
+
+            <span>
+              {timelineEnd?.toLocaleDateString()}
+            </span>
+          </div>
+
+          {approvedRequests.map(request => (
+            <div
+              className="timeline-row"
+              key={request.id}
+            >
+              <div className="timeline-name">
+                {getEmployeeName(
+                  request.employeeId
+                )}
+              </div>
+
+              <div className="timeline-track">
+                <div
+                  className="timeline-bar"
+                  style={getTimelineStyle(
+                    request
+                  )}
+                >
+                  {getTypeName(request.type)}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

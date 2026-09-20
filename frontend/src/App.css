@@ -182,3 +182,43 @@
     border-right-color: var(--border);
   }
 }
+
+.timeline {
+  margin-top: 20px;
+  max-width: 900px;
+}
+
+.timeline-dates {
+  display: flex;
+  justify-content: space-between;
+  margin-left: 160px;
+  margin-bottom: 5px;
+}
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.timeline-name {
+  width: 150px;
+  margin-right: 10px;
+}
+
+.timeline-track {
+  position: relative;
+  height: 30px;
+  background-color: #eeeeee;
+  flex: 1;
+}
+
+.timeline-bar {
+  position: absolute;
+  height: 30px;
+  background-color: #cccccc;
+  box-sizing: border-box;
+  padding: 5px;
+  white-space: nowrap;
+  overflow: hidden;
+}

@@ -56,3 +56,18 @@ The tables are:
 Employees
 
 TimeOffRequests
+
+-----------------
+
+
+## to create database
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Port=3306;Database=vacation_tracker;User=vacation_app;Password= ;"
+
+## EF migrations
+
+1. dotnet tool run dotnet-ef migrations add MigrationName
+2. dotnet tool run dotnet-ef database update
+
+## future changes:
+- Better Gantt Chart, with colour coding
+- Azure Deployment (Azure Static Web Apps, Azure App Service, Aure Database, Microsoft EntraID, Key Vault)

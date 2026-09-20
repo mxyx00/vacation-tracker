@@ -20,6 +20,8 @@ interface TimeOffRequest {
 }
 
 function App() {
+
+  //state variables
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number>(0);
   const [requests, setRequests] = useState<TimeOffRequest[]>([]);
@@ -28,8 +30,12 @@ function App() {
   const [endDate, setEndDate] = useState("");
   const [type, setType] = useState(0);
   const [comment, setComment] = useState("");
+  const [editingRequestId, setEditingRequestId] = useState<number | null>(null); //alows users to edit
+
 
   const [managerRequests, setManagerRequests] = useState<TimeOffRequest[]>([]);
+
+  const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
     fetch("http://localhost:5175/api/employees")
@@ -65,10 +71,11 @@ function App() {
       );
   }
 
-  async function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) 
+  {
     event.preventDefault();
 
-    const newRequest = {
+    const requestData = {
       employeeId: selectedEmployeeId,
       startDate: startDate,
       endDate: endDate,
@@ -76,16 +83,21 @@ function App() {
       employeeComment: comment
     };
 
-    const response = await fetch(
-      "http://localhost:5175/api/timeoffrequests",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(newRequest)
-      }
-    );
+    let url = "http://localhost:5175/api/timeoffrequests";
+    let method = "POST";
+
+    if (editingRequestId !== null) {
+      url = `http://localhost:5175/api/timeoffrequests/${editingRequestId}`;
+      method = "PUT";
+    }
+
+    const response = await fetch(url, {
+      method: method,
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(requestData)
+    });
 
     if (!response.ok) {
       const errorMessage = await response.text();
@@ -93,13 +105,14 @@ function App() {
       return;
     }
 
-    setStartDate("");
-    setEndDate("");
-    setType(0);
-    setComment("");
+  setStartDate("");
+  setEndDate("");
+  setType(0);
+  setComment("");
+  setEditingRequestId(null);
 
-    loadRequests(selectedEmployeeId);
-  }
+  loadRequests(selectedEmployeeId);
+}
 
   function getTypeName(type: number) {
     switch (type) {
@@ -178,6 +191,7 @@ function App() {
     }
 
     loadManagerRequests();
+    loadRequests(selectedEmployeeId); //refreshes
   }
 
   async function rejectRequest(id: number) {
@@ -198,7 +212,28 @@ function App() {
     }
 
     loadManagerRequests();
+    loadRequests(selectedEmployeeId); //refresh test
   }
+
+  function editRequest(request: TimeOffRequest)
+  {
+    setEditingRequestId(request.id);
+
+    setStartDate(request.startDate.substring(0, 10));
+    setEndDate(request.endDate.substring(0, 10));
+    setType(request.type);
+    setComment(request.employeeComment ?? "");
+  }
+
+  // filter 
+
+  const filteredRequests = requests.filter(request => {
+    if (statusFilter === "all") {
+      return true;
+    }
+
+    return request.status === Number(statusFilter);
+  });
 
   return (
     <div>
@@ -208,9 +243,10 @@ function App() {
         Current User:
         <select
           value={selectedEmployeeId}
-          onChange={e =>
-            setSelectedEmployeeId(Number(e.target.value))
-          }
+          onChange={e => {
+              setSelectedEmployeeId(Number(e.target.value));
+              setStatusFilter("all"); // when changing users, refreshes the filter to all automatically
+            }}
         >
           {employees.map(employee => (
             <option
@@ -223,7 +259,7 @@ function App() {
         </select>
       </label>
 
-      <h2>New Request</h2>
+      <h2>{editingRequestId === null ? "New Request" : "Edit Request"}</h2>
 
       <form onSubmit={handleSubmit}>
         <div>
@@ -274,13 +310,28 @@ function App() {
         </div>
 
         <button type="submit">
-          Submit Request
+        {editingRequestId === null ? "Submit Request" : "Save Changes"}
         </button>
       </form>
 
+      
+
       <h2>My Requests</h2>
 
-      {requests.length === 0 ? (
+      <label>
+        Filter by Status:{" "}
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+        >
+          <option value="all">All</option>
+          <option value="0">In Review</option>
+          <option value="1">Approved</option>
+          <option value="2">Rejected</option>
+        </select>
+      </label>
+
+      {filteredRequests.length === 0 ? ( //change to filteredRequests after making dropdown
         <p>No requests found.</p>
       ) : (
         <table>
@@ -291,17 +342,25 @@ function App() {
               <th>End Date</th>
               <th>Status</th>
               <th>Comment</th>
+              <th>Actions</th>
             </tr>
           </thead>
 
           <tbody>
-            {requests.map(request => (
+            {filteredRequests.map(request => (
               <tr key={request.id}>
                 <td>{getTypeName(request.type)}</td>
                 <td>{request.startDate}</td>
                 <td>{request.endDate}</td>
                 <td>{getStatusName(request.status)}</td>
                 <td>{request.employeeComment}</td>
+                  <td>
+                    {request.status === 0 && (
+                      <button onClick={() => editRequest(request)}>
+                        Edit
+                      </button>
+                    )}
+                  </td>
               </tr>
             ))}
           </tbody>

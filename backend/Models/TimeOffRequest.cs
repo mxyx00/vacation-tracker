@@ -9,8 +9,8 @@ public class TimeOffRequest
     public int EmployeeId {get;set;}
     public Employee Employee {get;set;} = null!;
 
-    public DateOnly StartDate {get;set;} //dateonly
-    public DateOnly EndDate {get;set;}
+    public DateTime StartDate {get;set;} //dateonly
+    public DateTime EndDate {get;set;}
 
     public TimeOffType Type {get;set;}
 

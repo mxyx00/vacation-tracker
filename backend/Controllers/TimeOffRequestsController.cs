@@ -24,8 +24,7 @@ public class TimeOffRequestsController : ControllerBase
             return BadRequest("End date cannot be before start date.");
         }
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
+        var today = DateTime.Today;
         if (request.EndDate < today)
         {
             return BadRequest("Request dates have passed");
@@ -95,7 +94,9 @@ public class TimeOffRequestsController : ControllerBase
 
     // Rejection
     [HttpPut("{id}/reject")]
-    public async Task<IActionResult> RejectRequest(int id, string? managerComment)
+    public async Task<IActionResult> RejectRequest(
+        int id,
+        string? managerComment)
     {
         var request = await _context.TimeOffRequests.FindAsync(id);
 
@@ -104,9 +105,9 @@ public class TimeOffRequestsController : ControllerBase
             return NotFound();
         }
 
-               if (request.Status != RequestStatus.InReview)
+        if (request.Status != RequestStatus.InReview)
         {
-            return BadRequest("Only requests in review can be approved.");
+            return BadRequest("Only requests in review can be rejected.");
         }
 
         request.Status = RequestStatus.Rejected;
@@ -134,7 +135,7 @@ public class TimeOffRequestsController : ControllerBase
             return BadRequest("End date cannot be before start date.");
         }
 
-        var today = DateOnly.FromDateTime(DateTime.Today);
+       var today = DateTime.Today;
 
         if (updatedRequest.EndDate < today)
         {

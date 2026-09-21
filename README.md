@@ -1,7 +1,5 @@
 # Vacation Request Tracker
 
-This is a simple web app for submitting and managing employee time off requests.
-
 Employees can:
 - Submit a time-off request
 - View and edit their requests

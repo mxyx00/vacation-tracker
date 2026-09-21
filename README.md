@@ -63,7 +63,6 @@ TimeOffRequests
 3. mysql + workbench etc.
 
 ## to create database
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Port=3306;Database=vacation_tracker;User=vacation_app;Password= ;"
 
 CREATE USER 'vacation_app'@'localhost'
 IDENTIFIED BY '{password}';
@@ -74,10 +73,13 @@ TO 'vacation_app'@'localhost';
 
 FLUSH PRIVILEGES;
 
-## EF migrations
+backend: dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost;Port=3306;Database=vacation_tracker;User=vacation_app;Password= ;"
 
-1. dotnet tool run dotnet-ef migrations add MigrationName
-2. dotnet tool run dotnet-ef database update
+## to create tables
+
+dotnet tool restore
+dotnet tool run dotnet-ef database update
+
 
 ## future changes:
 - Better Gantt Chart, with colour coding

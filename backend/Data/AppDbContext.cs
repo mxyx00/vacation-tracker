@@ -10,7 +10,7 @@ public class AppDbContext : DbContext
         
     }
 
-    public DbSet<Employee> Employees {get;set;}
+    public DbSet<Employee> Employees {get; set;}
     public DbSet<TimeOffRequest> TimeOffRequests {get;set;}
 
 }

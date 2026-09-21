@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import "./App.css";
+// import Math;
 
 interface Employee {
   id: number;
@@ -45,14 +46,15 @@ function App() {
       .then(data => {
         setEmployees(data);
 
-        if (data.length > 0) {
-          setSelectedEmployeeId(data[0].id);
-        }
+        if (data.length > 0) setSelectedEmployeeId(data[0].id);
+      
       })
       .catch(error => console.error("Error loading employees:", error));
   }, []);
 
   // Load requests when selected employee changes
+  // workflow: .then(response => response.json()).then(data => set[](data)).catch([error])
+
   useEffect(() => {
     if (selectedEmployeeId === 0) return;
 
@@ -62,7 +64,6 @@ function App() {
       .catch(error => console.error("Error loading requests:", error));
   }, [selectedEmployeeId]);
 
-  // Load all requests when page opens
   useEffect(() => {
     fetch("http://localhost:5175/api/timeoffrequests")
       .then(response => response.json())
@@ -73,7 +74,7 @@ function App() {
   const selectedEmployee = employees.find(employee => employee.id === selectedEmployeeId);
 
   // Load manager requests if selected user is a manager
-  useEffect(() => {
+    useEffect(() => {
     if (selectedEmployee?.role === 1) {
       fetch("http://localhost:5175/api/timeoffrequests/in-review")
         .then(response => response.json())
@@ -82,6 +83,7 @@ function App() {
     }
   }, [selectedEmployeeId, employees, selectedEmployee?.role]);
 
+
   function loadRequests(employeeId: number) {
     fetch(`http://localhost:5175/api/timeoffrequests/employee/${employeeId}`)
       .then(response => response.json())
@@ -89,12 +91,6 @@ function App() {
       .catch(error => console.error("Error loading requests:", error));
   }
 
-  function loadManagerRequests() {
-    fetch("http://localhost:5175/api/timeoffrequests/in-review")
-      .then(response => response.json())
-      .then(data => setManagerRequests(data))
-      .catch(error => console.error("Error loading manager requests:", error));
-  }
 
   function loadAllRequests() {
     fetch("http://localhost:5175/api/timeoffrequests")
@@ -114,6 +110,8 @@ function App() {
       type: type,
       employeeComment: comment
     };
+
+// https://blog.postman.com/put-vs-post/
 
     let url = "http://localhost:5175/api/timeoffrequests";
     let method = "POST";
@@ -158,25 +156,24 @@ function App() {
     setComment(request.employeeComment ?? "");
   }
 
-  // Approve request
+  // Aapprove
+
   async function approveRequest(id: number) {
     const comment = window.prompt("Optional manager comment:") ?? "";
 
+    // encodeURI component: so that random characters dont result in an erorr (& ? etc.)
     const response = await fetch(
       `http://localhost:5175/api/timeoffrequests/${id}/approve?managerComment=${encodeURIComponent(comment)}`,
       { method: "PUT" }
     );
 
-    if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(errorMessage);
-      return;
-    }
+    if (!response.ok) return; //error?
 
-    loadManagerRequests();
+    setManagerRequests(managerRequests.filter(request => request.id !== id));
     loadRequests(selectedEmployeeId);
     loadAllRequests();
   }
+
 
   // Reject request
   async function rejectRequest(id: number) {
@@ -188,41 +185,30 @@ function App() {
     );
 
     if (!response.ok) {
-      const errorMessage = await response.text();
-      alert(errorMessage);
+      alert(await response.text());
       return;
     }
 
-    loadManagerRequests();
+    setManagerRequests(managerRequests.filter(request => request.id !== id));
     loadRequests(selectedEmployeeId);
     loadAllRequests();
   }
 
   function getTypeName(type: number) {
     switch (type) {
-      case 0:
-        return "Vacation";
-      case 1:
-        return "Unpaid Leave";
-      case 2:
-        return "Parental Leave";
-      case 3:
-        return "Sick Leave";
-      default:
-        return "Unknown";
+      case 0: return "Vacation";
+      case 1:return "Unpaid Leave";
+      case 2: return "Parental Leave";
+      case 3:return "Sick Leave";
     }
   }
 
   function getStatusName(status: number) {
     switch (status) {
-      case 0:
-        return "In Review";
-      case 1:
-        return "Aproved";
-      case 2:
-        return "Rejected";
-      default:
-        return "Unknown";
+      case 0:  return "In Review";
+      case 1:return "Aproved";
+      case 2: return "Rejected";
+
     }
   }
 
@@ -246,14 +232,14 @@ function App() {
     });
   }
 
-  // Filter employee requests
+  // filter employee requests
   const filteredRequests = requests.filter(request => {
     if (statusFilter === "all") return true;
 
     return request.status === Number(statusFilter);
   });
 
-  // Timeline
+  // gantt chart
   const millisecondsPerDay = 86400000;
   const timelineEnd = new Date("2026-12-31T00:00:00");
 
@@ -277,9 +263,11 @@ function App() {
     const requestStart = parseDate(request.startDate);
     let requestEnd = parseDate(request.endDate);
 
-    if (requestEnd > timelineEnd) {
-      requestEnd = timelineEnd;
-    }
+    if (requestEnd > timelineEnd) requestEnd = timelineEnd;
+
+    // math: 
+    // converts each request’s start pos. and length into a % of the total range
+    // determines where the bar starts and how wide it is.
 
     const totalMilliseconds = timelineEnd.getTime() - timelineStart.getTime();
     const totalDays = Math.round(totalMilliseconds / millisecondsPerDay) + 1;
@@ -293,10 +281,7 @@ function App() {
     const leftPercent = (daysFromTimelineStart / totalDays) * 100;
     const widthPercent = (numberOfRequestDays / totalDays) * 100;
 
-    return {
-      left: `${leftPercent}%`,
-      width: `${widthPercent}%`
-    };
+    return { left: `${leftPercent}%`,width: `${widthPercent}%`};
   }
 
   return (
@@ -316,8 +301,10 @@ function App() {
           {employees.map(employee => (
             <option key={employee.id} value={employee.id}>
               {employee.firstName} {employee.lastName}
+
             </option>
           ))}
+
         </select>
       </label>
 
@@ -328,7 +315,9 @@ function App() {
           <div>
             <label>Start Date: </label>
             <input
+
               type="date"
+
               value={startDate}
               onChange={e => setStartDate(e.target.value)}
               required
@@ -345,10 +334,12 @@ function App() {
             />
           </div>
 
+
           <div>
             <label>Leave Type: </label>
             <select value={type} onChange={e => setType(Number(e.target.value))}>
               <option value={0}>Vacation</option>
+
               <option value={1}>Unpaid Leave</option>
               <option value={2}>Parental Leave</option>
               <option value={3}>Sick Leave</option>
@@ -364,6 +355,7 @@ function App() {
             {editingRequestId === null ? "Submit Request" : "Save Changes"}
           </button>
 
+{/* cancel button to clear form */}
           {editingRequestId !== null && (
             <button type="button" onClick={clearForm}>
               Cancel
@@ -425,7 +417,7 @@ function App() {
 
       {selectedEmployee?.role === 1 && (
         <div>
-          <h2>Manager Review</h2>
+          <h2>Manager View</h2>
 
           {managerRequests.length === 0 ? (
             <p>No requests waiting for review.</p>
@@ -467,7 +459,7 @@ function App() {
       <h2>Approved Time Off</h2>
 
       {approvedRequests.length === 0 ? (
-        <p>No approved time off found.</p>
+        <p>Null.</p>
       ) : (
         <div className="timeline">
           <div className="timeline-dates">

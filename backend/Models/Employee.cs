@@ -17,7 +17,5 @@ public class Employee
 
     public EmployeeRole Role {get; set;} = EmployeeRole.Employee;
 
-    public ICollection<TimeOffRequest> TimeOffRequests{get;set;} = new List<TimeOffRequest>();
-
 
 }

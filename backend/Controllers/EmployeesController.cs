@@ -23,6 +23,7 @@ public class EmployeesController : ControllerBase //extending controller class
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Employee>>> GetEmployees()
     {
-        return await _context.Employees.ToListAsync(); // ef core --> get every employee
+        var employees = await _context.Employees.ToListAsync();
+        return employees;
     }
 }

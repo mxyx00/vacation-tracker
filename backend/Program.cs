@@ -1,7 +1,5 @@
 using backend.Data;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
-using MySql.EntityFrameworkCore.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -12,18 +10,12 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseMySQL(connecti
 
 builder.Services.AddControllers();
 
+// https://learn.microsoft.com/en-us/aspnet/core/security/cors?view=aspnetcore-10.0
 builder.Services.AddCors(options => {options.AddPolicy("AllowFrontend", policy =>{ policy.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod();});});
 
-builder.Services.AddOpenApi();
 
 
 var app = builder.Build();
 app.UseCors("AllowFrontend");
-
-if (app.Environment.IsDevelopment()) app.MapOpenApi();
-
-app.UseHttpsRedirection();
-
-app.UseAuthorization();
 app.MapControllers();
 app.Run();

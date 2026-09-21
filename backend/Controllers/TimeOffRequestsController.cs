@@ -1,3 +1,5 @@
+// personal reference: https://stackoverflow.com/questions/14455293/how-and-when-to-use-async-and-await
+
 using backend.Data;
 using backend.Models;
 using Microsoft.AspNetCore.Mvc;
@@ -21,17 +23,17 @@ public class TimeOffRequestsController : ControllerBase
     public async Task<ActionResult<TimeOffRequest>> CreateRequest(CreateTimeOffRequest request)
     {
         if (request.EndDate < request.StartDate)
+        {
             return BadRequest("End date cannot be before start date.");
+        }
 
-        var today = DateTime.Today;
-
-        if (request.EndDate < today)
+        if (request.EndDate < DateTime.Today)
+        {
             return BadRequest("Request dates have passed.");
+        }
 
-        var employeeExists = await _context.Employees.AnyAsync(e => e.Id == request.EmployeeId);
+        var employeeExists = await _context.Employees.AnyAsync(employee => employee.Id == request.EmployeeId);
 
-        if (!employeeExists)
-            return BadRequest("Employee does not exist.");
 
         var timeOffRequest = new TimeOffRequest
         {
@@ -46,36 +48,45 @@ public class TimeOffRequestsController : ControllerBase
         _context.TimeOffRequests.Add(timeOffRequest);
         await _context.SaveChangesAsync();
 
-        return Ok(timeOffRequest);
+        return Ok(timeOffRequest); // https://learn.microsoft.com/en-us/dotnet/api/system.web.http.apicontroller.ok?view=aspnetcore-2.2
     }
 
     // Get requests for one employee
     [HttpGet("employee/{employeeId}")]
     public async Task<ActionResult<IEnumerable<TimeOffRequest>>> GetEmployeeRequests(int employeeId)
     {
-        return await _context.TimeOffRequests.Where(r => r.EmployeeId == employeeId).ToListAsync();
+        var requests = await _context.TimeOffRequests
+            .Where(request => request.EmployeeId == employeeId)
+            .ToListAsync();
+
+        return requests;
     }
 
-    // Get requests waiting for manager review
     [HttpGet("in-review")]
     public async Task<ActionResult<IEnumerable<TimeOffRequest>>> GetInReviewRequests()
     {
-        return await _context.TimeOffRequests
-            .Where(r => r.Status == RequestStatus.InReview)
+        var requests = await _context.TimeOffRequests
+            .Where(request => request.Status == RequestStatus.InReview)
             .ToListAsync();
+
+        return requests;
     }
 
-    // Approve request
+    // Approval
     [HttpPut("{id}/approve")]
     public async Task<IActionResult> ApproveRequest(int id, string? managerComment)
     {
         var request = await _context.TimeOffRequests.FindAsync(id);
 
         if (request == null)
+        {
             return NotFound();
+        }
 
         if (request.Status != RequestStatus.InReview)
+        {
             return BadRequest("Only requests in review can be approved.");
+        }
 
         request.Status = RequestStatus.Approved;
         request.ManagerComment = managerComment;
@@ -85,15 +96,20 @@ public class TimeOffRequestsController : ControllerBase
         return Ok(request);
     }
 
-    // Reject request
     [HttpPut("{id}/reject")]
     public async Task<IActionResult> RejectRequest(int id, string? managerComment)
     {
         var request = await _context.TimeOffRequests.FindAsync(id);
 
-        if (request == null) return NotFound();
+        if (request == null)
+        {
+            return NotFound();
+        }
 
-        if (request.Status != RequestStatus.InReview)  return BadRequest("Only requests in review can be rejected.");
+        if (request.Status != RequestStatus.InReview)
+        {
+            return BadRequest("Only requests in review can be rejected.");
+        }
 
         request.Status = RequestStatus.Rejected;
         request.ManagerComment = managerComment;
@@ -109,16 +125,15 @@ public class TimeOffRequestsController : ControllerBase
     {
         var request = await _context.TimeOffRequests.FindAsync(id);
 
-        if (request == null)
-            return NotFound();
-
         if (updatedRequest.EndDate < updatedRequest.StartDate)
+        {
             return BadRequest("End date cannot be before start date.");
+        }
 
-        var today = DateTime.Today;
-
-        if (updatedRequest.EndDate < today)
+        if (updatedRequest.EndDate < DateTime.Today)
+        {
             return BadRequest("Request cannot be in the past.");
+        }
 
         request.StartDate = updatedRequest.StartDate;
         request.EndDate = updatedRequest.EndDate;
@@ -130,10 +145,10 @@ public class TimeOffRequestsController : ControllerBase
         return Ok(request);
     }
 
-    // Get all requests
     [HttpGet]
     public async Task<ActionResult<IEnumerable<TimeOffRequest>>> GetAllRequests()
     {
-        return await _context.TimeOffRequests.ToListAsync();
+        var requests = await _context.TimeOffRequests.ToListAsync();
+        return requests;
     }
 }
